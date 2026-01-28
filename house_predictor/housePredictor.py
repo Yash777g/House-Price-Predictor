@@ -1,12 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pandas as pd
-import numpy as np
 from sklearn.linear_model import LinearRegression
-import requests
-from bs4 import BeautifulSoup
 
-# sample data 
+# Training data
 data = {
     'Size': [1200, 1500, 1800, 2000, 2400, 3000],
     'Locality': ['Urban', 'Suburban', 'Rural', 'Urban', 'Suburban', 'Urban'],
@@ -17,110 +14,112 @@ data = {
 }
 
 df = pd.DataFrame(data)
+df = pd.get_dummies(df, columns=["Locality", "Region"])
 
-# Encode categorical variables
-df = pd.get_dummies(df, columns=['Locality', 'Region'])
-
-# training data
-X = df.drop('Price', axis=1)
-y = df['Price']
+X = df.drop("Price", axis=1)
+y = df["Price"]
 
 model = LinearRegression()
 model.fit(X, y)
 
-# replacing it with real data but might do it later due to legal reasons
+# Mock land rate function
 def get_land_rate(region):
-    """Mock function to simulate fetching land rates (replace with real scraping)"""
     rates = {
-        'Mumbai': 50000,
-        'Delhi': 30000,
-        'Bangalore': 25000,
-        'Hyderabad': 28000,
-        'Chennai': 22000
+        "Mumbai": 50000,
+        "Delhi": 30000,
+        "Bangalore": 25000,
+        "Hyderabad": 28000,
+        "Chennai": 22000
     }
-    return rates.get(region, 25000)  # Default if region not found
+    return rates.get(region, 25000)
 
-# gui
+# Interface
 class HousePricePredictor:
+
     def __init__(self, root):
         self.root = root
         self.root.title("House Price Predictor")
-        self.root.geometry("400x400")
-        
-        # Variables
+        self.root.geometry("420x450")
+        self.root.resizable(False, False)
+
         self.size = tk.DoubleVar()
         self.locality = tk.StringVar()
         self.region = tk.StringVar()
         self.seaview = tk.BooleanVar()
         self.land_rate = tk.DoubleVar()
-        
-        # Layout
-        ttk.Label(root, text="House Features", font=('Arial', 14)).pack(pady=10)
-        
-        ttk.Label(root, text="Size (sq. ft.):").pack()
-        ttk.Entry(root, textvariable=self.size).pack()
-        
-        ttk.Label(root, text="Locality:").pack()
-        ttk.Combobox(root, textvariable=self.locality, 
-                     values=["Urban", "Suburban", "Rural"]).pack()
-        
-        ttk.Label(root, text="Region:").pack()
-        self.region_cb = ttk.Combobox(root, textvariable=self.region, 
-                                    values=["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"])
-        self.region_cb.pack()
-        self.region_cb.bind("<<ComboboxSelected>>", self.update_land_rate)
-        
-        ttk.Label(root, text="Land Rate (₹/sq. ft.):").pack()
-        ttk.Label(root, textvariable=self.land_rate).pack()
-        
-        ttk.Checkbutton(root, text="Seaview", variable=self.seaview).pack(pady=5)
-        
-        ttk.Button(root, text="Predict Price", command=self.predict).pack(pady=20)
-        
-        self.result_label = ttk.Label(root, text="", font=('Arial', 12))
-        self.result_label.pack()
-    
-    def update_land_rate(self, event):
-        """Update land rate when region changes"""
-        region = self.region.get()
-        rate = get_land_rate(region)
-        self.land_rate.set(rate)
-    
-    def predict(self):
-        """Predict house price based on inputs"""
-        try:
-            # Create input DataFrame
-            input_data = {
-                'Size': [self.size.get()],
-                'Seaview': [1 if self.seaview.get() else 0],
-                'LandRate': [self.land_rate.get()],
-                'Locality_Urban': [1 if self.locality.get() == 'Urban' else 0],
-                'Locality_Suburban': [1 if self.locality.get() == 'Suburban' else 0],
-                'Locality_Rural': [1 if self.locality.get() == 'Rural' else 0],
-                'Region_Bangalore': [1 if self.region.get() == 'Bangalore' else 0],
-                'Region_Chennai': [1 if self.region.get() == 'Chennai' else 0],
-                'Region_Delhi': [1 if self.region.get() == 'Delhi' else 0],
-                'Region_Hyderabad': [1 if self.region.get() == 'Hyderabad' else 0],
-                'Region_Mumbai': [1 if self.region.get() == 'Mumbai' else 0]
-            }
-            
-            # Ensure all columns exist (some may be missing in input)
-            input_df = pd.DataFrame(input_data)
-            for col in X.columns:
-                if col not in input_df.columns:
-                    input_df[col] = 0
-            
-            # Reorder columns to match training data
-            input_df = input_df[X.columns]
-            
-            # Predict
-            price = model.predict(input_df)[0]
-            self.result_label.config(text=f"Predicted Price: ₹{price:,.2f}")
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Invalid input: {str(e)}")
 
-# Run the application
+        ttk.Label(root, text="🏠 House Price Predictor", font=("Arial", 16, "bold")).pack(pady=10)
+
+        self.create_form()
+
+    def create_form(self):
+        ttk.Label(self.root, text="House Size (sq ft)").pack()
+        ttk.Entry(self.root, textvariable=self.size).pack()
+
+        ttk.Label(self.root, text="Locality").pack()
+        ttk.Combobox(
+            self.root,
+            textvariable=self.locality,
+            values=["Urban", "Suburban", "Rural"],
+            state="readonly"
+        ).pack()
+
+        ttk.Label(self.root, text="Region").pack()
+        region_cb = ttk.Combobox(
+            self.root,
+            textvariable=self.region,
+            values=["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"],
+            state="readonly"
+        )
+        region_cb.pack()
+        region_cb.bind("<<ComboboxSelected>>", self.update_land_rate)
+
+        ttk.Label(self.root, text="Land Rate (₹/sq ft)").pack()
+        ttk.Label(self.root, textvariable=self.land_rate, font=("Arial", 10, "bold")).pack()
+
+        ttk.Checkbutton(self.root, text="Seaview Property", variable=self.seaview).pack(pady=5)
+
+        ttk.Button(self.root, text="Predict Price", command=self.predict).pack(pady=20)
+
+        self.result_label = ttk.Label(self.root, text="", font=("Arial", 12, "bold"))
+        self.result_label.pack()
+
+    def update_land_rate(self, event=None):
+        self.land_rate.set(get_land_rate(self.region.get()))
+
+    def predict(self):
+        try:
+            if self.size.get() <= 0:
+                raise ValueError("House size must be greater than zero.")
+
+            input_data = {
+                "Size": [self.size.get()],
+                "Seaview": [1 if self.seaview.get() else 0],
+                "LandRate": [self.land_rate.get()]
+            }
+
+            for loc in ["Urban", "Suburban", "Rural"]:
+                input_data[f"Locality_{loc}"] = [1 if self.locality.get() == loc else 0]
+
+            for reg in ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"]:
+                input_data[f"Region_{reg}"] = [1 if self.region.get() == reg else 0]
+
+            input_df = pd.DataFrame(input_data)
+
+            for col in X.columns:
+                if col not in input_df:
+                    input_df[col] = 0
+
+            input_df = input_df[X.columns]
+
+            prediction = model.predict(input_df)[0]
+            self.result_label.config(text=f"Predicted Price: ₹{prediction:,.2f}")
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+
+# Main
 if __name__ == "__main__":
     root = tk.Tk()
     app = HousePricePredictor(root)
